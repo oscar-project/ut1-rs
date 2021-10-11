@@ -92,7 +92,6 @@ impl<'a> Blocklist<'a> {
     pub fn detect_url(&self, url: &Url) -> bool {
         let url = &url[Position::BeforeHost..Position::AfterPath];
 
-        println!("{}", url);
         self.urls.contains(url)
     }
 
