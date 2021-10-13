@@ -80,15 +80,16 @@ impl<'a> Blocklist<'a> {
     }
 
     /// Create [Blocklist] with default folder (`./ut1-blacklists/blacklists/`) and default kind (`adult`).
-    pub fn with_default_folder() -> Result<Self, Error> {
+    pub fn with_defaults() -> Result<Self, Error> {
         let default_folder = PathBuf::from("./ut1-blacklists/blacklists/");
         Self::with_folder("adult", &default_folder)
     }
 
-    /// Get a reference to the blocklist's domains.
-    // pub fn domains(&self) -> &HashSet<String> {
-    //     &self.domains
-    // }
+    /// Create [Blocklist] with default folder (`./ut1-blacklists/blacklists/`) and default kind (`adult`).
+    pub fn with_default_folder(kind: &'a str) -> Result<Self, Error> {
+        let default_folder = PathBuf::from("./ut1-blacklists/blacklists/");
+        Self::with_folder(kind, &default_folder)
+    }
 
     /// returns `true` if domain of the provided url is in the domains list,
     /// `false` if not, or if there's no domain in the url.
@@ -115,26 +116,6 @@ impl<'a> Blocklist<'a> {
     pub fn kind(&self) -> &'a str {
         &self.kind
     }
-
-    // /// Get a mutable reference to the blocklist's domains.
-    // pub fn domains_mut(&mut self) -> &mut HashSet<String> {
-    //     &mut self.domains
-    // }
-
-    // /// Get a mutable reference to the blocklist's urls.
-    // pub fn urls_mut(&mut self) -> &mut HashSet<String> {
-    //     &mut self.urls
-    // }
-
-    // /// Set the blocklist's domains.
-    // pub fn set_domains(&mut self, domains: HashSet<String>) {
-    //     self.domains = domains;
-    // }
-
-    // /// Set the blocklist's urls.
-    // pub fn set_urls(&mut self, urls: HashSet<String>) {
-    //     self.urls = urls;
-    // }
 }
 
 #[cfg(test)]
