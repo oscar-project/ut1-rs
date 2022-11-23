@@ -114,7 +114,7 @@ impl<'a> Blocklist<'a> {
 
     /// Get a reference to the blocklist's kind.
     pub fn kind(&self) -> &'a str {
-        &self.kind
+        self.kind
     }
 }
 
