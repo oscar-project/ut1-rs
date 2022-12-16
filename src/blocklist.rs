@@ -48,6 +48,7 @@ impl Blocklist {
             .lines()
             .filter_map(Result::ok)
             .collect();
+
         Ok(Self {
             kind,
             domains,
@@ -129,6 +130,10 @@ impl Blocklist {
     /// Get a reference to the blocklist's kind.
     pub fn kind(&self) -> &str {
         &self.kind
+    }
+
+    pub fn domains(&self) -> &HashSet<String> {
+        &self.domains
     }
 }
 
