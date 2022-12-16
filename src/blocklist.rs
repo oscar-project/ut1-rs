@@ -24,16 +24,16 @@ use crate::error::Ut1Error as Error;
 ///  - *filter_url* will act on whole URLS
 ///  - *filter_domain* will only check if the provided url's domain is present in the blocklist.
 ///
-pub struct Blocklist<'a> {
-    kind: &'a str,
+pub struct Blocklist {
+    kind: String,
     domains: HashSet<String>,
     urls: HashSet<String>,
 }
 
-impl<'a> Blocklist<'a> {
+impl Blocklist {
     /// Create a new Blocklist of provided kind.
     ///
-    pub fn new(kind: &'a str, domains: HashSet<String>, urls: HashSet<String>) -> Self {
+    pub fn new(kind: String, domains: HashSet<String>, urls: HashSet<String>) -> Self {
         Self {
             kind,
             domains,
@@ -41,17 +41,32 @@ impl<'a> Blocklist<'a> {
         }
     }
 
+    /// create a blocklist from a file that has a domains list
+    pub fn from_domains_file(kind: String, file: &Path) -> Result<Self, Error> {
+        let domains = File::open(file).map_err(|_| Error::BlocklistNotFound(file.to_path_buf()))?;
+        let domains = BufReader::new(domains)
+            .lines()
+            .filter_map(Result::ok)
+            .collect();
+
+        Ok(Self {
+            kind,
+            domains,
+            urls: HashSet::new(),
+        })
+    }
+
     /// create a blocklist from specified kind and folder.
     ///
     /// It will look for  `path/of/the/folder/kind`.
-    pub fn with_folder(kind: &'a str, folder: &Path) -> Result<Self, Error> {
+    pub fn with_folder(kind: String, folder: &Path) -> Result<Self, Error> {
         let mut file_path = PathBuf::from(folder);
 
         if !file_path.is_dir() {
             return Err(Error::NotADirectory(file_path));
         }
 
-        file_path.push(kind);
+        file_path.push(kind.clone());
 
         let mut domains = file_path.clone();
         domains.push("domains");
@@ -82,11 +97,11 @@ impl<'a> Blocklist<'a> {
     /// Create [Blocklist] with default folder (`./ut1-blacklists/blacklists/`) and default kind (`adult`).
     pub fn with_defaults() -> Result<Self, Error> {
         let default_folder = PathBuf::from("./ut1-blacklists/blacklists/");
-        Self::with_folder("adult", &default_folder)
+        Self::with_folder("adult".to_string(), &default_folder)
     }
 
     /// Create [Blocklist] with default folder (`./ut1-blacklists/blacklists/`) and default kind (`adult`).
-    pub fn with_default_folder(kind: &'a str) -> Result<Self, Error> {
+    pub fn with_default_folder(kind: String) -> Result<Self, Error> {
         let default_folder = PathBuf::from("./ut1-blacklists/blacklists/");
         Self::with_folder(kind, &default_folder)
     }
@@ -113,8 +128,12 @@ impl<'a> Blocklist<'a> {
     }
 
     /// Get a reference to the blocklist's kind.
-    pub fn kind(&self) -> &'a str {
+    pub fn kind(&self) -> &str {
         &self.kind
+    }
+
+    pub fn domains(&self) -> &HashSet<String> {
+        &self.domains
     }
 }
 
@@ -127,7 +146,7 @@ mod tests {
     use super::Blocklist;
     use tempfile;
 
-    fn get_test_blocklist() -> Result<Blocklist<'static>, Box<dyn Error>> {
+    fn get_test_blocklist() -> Result<Blocklist, Box<dyn Error>> {
         let bl_folder = tempfile::tempdir()?;
         let bl_adult_folder = bl_folder.path().join("adult");
         std::fs::create_dir(&bl_adult_folder)?;
@@ -140,14 +159,14 @@ mod tests {
         let mut bl_urls_file = File::create(bl_urls_file)?;
         bl_urls_file.write_all("foo.bar/baz".as_bytes())?;
 
-        let bl = Blocklist::with_folder("adult", bl_folder.path())?;
+        let bl = Blocklist::with_folder("adult".to_string(), bl_folder.path())?;
         Ok(bl)
     }
 
     #[test]
     fn test_new() {
         let domains = vec!["foo.bar".to_string()].into_iter();
-        let bl = Blocklist::new("test", domains.collect(), HashSet::new());
+        let bl = Blocklist::new("test".to_string(), domains.collect(), HashSet::new());
 
         let is_detected = Url::from_str("https://foo.bar").unwrap();
         let is_not_detected = Url::from_str("https://baz.quux").unwrap();

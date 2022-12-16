@@ -2,7 +2,11 @@
 name = "ut1_blocklist"
 version = "0.1.0"
 edition = "2018"
-
+license = "MIT"
+description = "UT1 blocklist URL/domain filters"
+homepage = "https://github.com/oscar-corpus/ut1-rs"
+keywords = ["ut1", "blocklist", "blacklist", "adult-content", "filters"]
+categories = ["text-processing", ]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
