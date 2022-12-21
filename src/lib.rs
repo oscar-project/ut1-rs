@@ -2,6 +2,7 @@
 
 pub mod blocklist;
 mod error;
+pub mod multibl;
 
 pub use blocklist::Blocklist;
 pub use error::Ut1Error as Error;
