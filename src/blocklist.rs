@@ -1,10 +1,10 @@
-/*! Blocklists.
+/*! Single tag blocklist
 
 Contains basic filtering code and constructors.
 
 Filtering methods can be used on [Url]s.
 
-!*/
+*/
 use std::{
     collections::HashSet,
     fs::File,
@@ -32,7 +32,6 @@ pub struct Blocklist {
 
 impl Blocklist {
     /// Create a new Blocklist of provided kind.
-    ///
     pub fn new(kind: String, domains: HashSet<String>, urls: HashSet<String>) -> Self {
         Self {
             kind,

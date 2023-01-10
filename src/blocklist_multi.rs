@@ -4,6 +4,37 @@
 //! For example, you may have the website `foo.com` that is both in A and B blocklists, and as such you'd like the blocklist to return `["A", "B"]`.
 //!
 //! Building might be slower than using the other blocklist available here, though.
+//!
+//! ## Directory structure
+//! The directory should have a number of subdirs, which in turn should have `domains` and `urls` files.
+//! The easiest way of using this is to get the whole [UT1 Blacklists](https://dsi.ut-capitole.fr/blacklists/index_en.php) archive,
+//! to decompress it and to point to the decompressed folder. **Be careful though, as some blocklists are also compressed (like `adult/domains.gz`)**
+/*!
+    ```text
+    ├── README
+    ├── ads -> publicite
+    ├── adult
+    │   ├── domains
+    │   ├── domains.24733
+    │   ├── domains.9309
+    │   ├── expressions
+    │   ├── urls
+    │   ├── usage
+    │   └── very_restrictive_expression
+    ├── aggressive -> agressif
+    ├── agressif
+    │   ├── domains
+    │   ├── expressions
+    │   ├── urls
+    │   └── usage
+    ├── arjel
+    │   ├── domains
+    │   └── usage
+    ├── associations_religieuses
+    │   ├── domains
+    │   └── usage
+    ```
+*/
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -15,6 +46,7 @@ use crate::error::Ut1Error;
 use url::{Position, Url};
 
 // TODO: replace owned strings by refs to a (static?) tag.
+/// Domain and URL blocklist
 pub struct Blocklist {
     domains: HashMap<String, Vec<String>>,
     urls: HashMap<Url, Vec<String>>,
