@@ -53,13 +53,15 @@ pub struct Blocklist {
 }
 
 impl Blocklist {
+    pub fn new(domains: HashMap<String, Vec<String>>, urls: HashMap<Url, Vec<String>>) -> Self {
+        Self { domains, urls }
+    }
     /// Try to build a [Url] from a string representing an URL.
     /// If it fails, tries again by adding https:// at the beginning.
     #[inline]
     fn normalize(url: &str) -> Result<Url, url::ParseError> {
         url.parse().or_else(|_| {
             let url: String = ["https://", url].iter().cloned().collect();
-            println!("trying {url}");
             url.parse::<Url>()
         })
     }
@@ -138,6 +140,7 @@ impl Blocklist {
             };
 
             if domain_path.exists() {
+                println!("loading {:?}", bl_name);
                 let r = File::open(&domain_path)?;
 
                 let bl_domains = BufReader::new(r)
@@ -177,6 +180,37 @@ impl Blocklist {
         Ok(Self { domains, urls })
     }
 
+    /// iteratively removes subdomains until there's a match
+    // TODO optim: we know max number of subdomains in blocklist,
+    //             so we could skip more
+    fn detect_subdomains(&self, domain: &str) -> Option<&Vec<String>> {
+        // keep domain as vector of chars since we'll rely heavily on indexing
+        // we use bytes to be able to use from_utf8 without having to allocate
+        // it should be safe because even if we have some non utf8 chars, . is utf8
+        let chars = domain.as_bytes();
+
+        // get char indexes of dots (in for example foo.bar.com)
+        let sep_positions = chars
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c == &&(b'.'))
+            .map(|(idx, _)| idx)
+            .peekable();
+
+        // iterate over dot positions
+        for pos in sep_positions {
+            // string to test is 1 char after the subdomain delimiter unil the end
+            // ignore if we can't build a string slice
+            if let Ok(to_test) = std::str::from_utf8(&chars[pos + 1..]) {
+                if let Some(categories) = self.domains.get(to_test) {
+                    // stop if we get categories
+                    return Some(categories);
+                }
+            }
+        }
+
+        None
+    }
     /// checks if a given URL is present.
     /// If a given URL is present both in domain and urls, merges the tags.
     /// The returning hashset cannot be empty.
@@ -184,9 +218,15 @@ impl Blocklist {
         let mut detections = HashSet::new();
 
         if let Ok(domain) = Self::normalize_domain(url) {
+            // try with full domain
             let domain_tags = self.domains.get(&domain);
             if let Some(domain_tags) = domain_tags {
                 detections.extend(domain_tags.iter());
+            } else {
+                // if not found, try by removing subdomains
+                if let Some(domain_tags) = self.detect_subdomains(&domain) {
+                    detections.extend(domain_tags.iter());
+                }
             }
         }
 
@@ -207,7 +247,7 @@ impl Blocklist {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{collections::HashMap, path::Path};
 
     use url::Url;
 
@@ -221,6 +261,20 @@ mod tests {
         assert_eq!(
             b.detect("https://abastrologie.com"),
             Some(["astrology".to_string()].iter().collect())
+        );
+    }
+
+    // long test
+    #[test]
+    fn subdomains() {
+        let domains = vec![("blogspot.com".to_string(), vec!["blog".to_string()])]
+            .into_iter()
+            .collect();
+        let b = Blocklist::new(domains, HashMap::new());
+
+        assert_eq!(
+            b.detect("https://ujj.blogspot.com/things"),
+            Some(["blog".to_string()].iter().collect())
         );
     }
 
