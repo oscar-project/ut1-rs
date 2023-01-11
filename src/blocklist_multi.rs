@@ -183,34 +183,53 @@ impl Blocklist {
     /// iteratively removes subdomains until there's a match
     // TODO optim: we know max number of subdomains in blocklist,
     //             so we could skip more
-    fn detect_subdomains(&self, domain: &str) -> Option<&Vec<String>> {
+    // TODO: make sure we don't check over the TLD only
+    fn detect_subdomains(&self, domain: &str) -> Option<HashSet<&String>> {
         // keep domain as vector of chars since we'll rely heavily on indexing
         // we use bytes to be able to use from_utf8 without having to allocate
         // it should be safe because even if we have some non utf8 chars, . is utf8
         let chars = domain.as_bytes();
 
         // get char indexes of dots (in for example foo.bar.com)
-        let sep_positions = chars
+        let mut sep_positions: Vec<usize> = chars
             .iter()
             .enumerate()
             .filter(|(_, c)| c == &&(b'.'))
             .map(|(idx, _)| idx)
-            .peekable();
+            .collect();
 
-        // iterate over dot positions
-        for pos in sep_positions {
-            // string to test is 1 char after the subdomain delimiter unil the end
-            // ignore if we can't build a string slice
-            if let Ok(to_test) = std::str::from_utf8(&chars[pos + 1..]) {
-                if let Some(categories) = self.domains.get(to_test) {
-                    // stop if we get categories
-                    return Some(categories);
+        // remove last position (between domain and TLD)
+        // so that we don't match on tld alone
+        sep_positions.pop();
+
+        // iterate over separator positions
+        let categories: HashSet<&String> = sep_positions
+            .into_iter()
+            .filter_map(|pos| {
+                // string to test is 1 char after the subdomain delimiter unil the end
+                // ignore if we can't build a string slice
+                if let Ok(to_test) = std::str::from_utf8(&chars[pos + 1..]) {
+                    println!("testing {to_test}");
+                    if let Some(categories) = self.domains.get(to_test) {
+                        // return categories if there's a match
+                        return Some(categories);
+                    }
+
+                    return None;
                 }
-            }
-        }
+                None
+            })
+            // flatten nested vectors
+            .flatten()
+            .collect();
 
-        None
+        if categories.is_empty() {
+            None
+        } else {
+            Some(categories)
+        }
     }
+
     /// checks if a given URL is present.
     /// If a given URL is present both in domain and urls, merges the tags.
     /// The returning hashset cannot be empty.
@@ -222,11 +241,10 @@ impl Blocklist {
             let domain_tags = self.domains.get(&domain);
             if let Some(domain_tags) = domain_tags {
                 detections.extend(domain_tags.iter());
-            } else {
-                // if not found, try by removing subdomains
-                if let Some(domain_tags) = self.detect_subdomains(&domain) {
-                    detections.extend(domain_tags.iter());
-                }
+            }
+            // try with subdomains
+            if let Some(domain_tags) = self.detect_subdomains(&domain) {
+                detections.extend(&domain_tags);
             }
         }
 
@@ -247,7 +265,11 @@ impl Blocklist {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::Path};
+    use std::{
+        collections::{HashMap, HashSet},
+        ops::Deref,
+        path::Path,
+    };
 
     use url::Url;
 
@@ -264,18 +286,49 @@ mod tests {
         );
     }
 
-    // long test
     #[test]
     fn subdomains() {
-        let domains = vec![("blogspot.com".to_string(), vec!["blog".to_string()])]
-            .into_iter()
-            .collect();
+        let domains = vec![
+            ("blogspot.com".to_string(), vec!["blog".to_string()]),
+            (
+                "adultblog.blogspot.com".to_string(),
+                vec!["adult".to_string()],
+            ),
+        ]
+        .into_iter()
+        .collect();
+        // let domains = vec![].into_iter().collect();
         let b = Blocklist::new(domains, HashMap::new());
 
-        assert_eq!(
-            b.detect("https://ujj.blogspot.com/things"),
-            Some(["blog".to_string()].iter().collect())
-        );
+        let test_urls: Vec<(_, Option<HashSet<_>>)> = vec![
+            ("https://ujj.blogspot.com/things", Some(vec!["blog"])),
+            (
+                "https://ujj.foo.bar.blogspot.com/things/etc.txt",
+                Some(vec!["blog"]),
+            ),
+            ("https://blogspot.com/index.html", Some(vec!["blog"])),
+            ("https://logspot.com/index.html", None),
+            (
+                "https://adultblog.blogspot.com/index.html",
+                Some(vec!["blog", "adult"]),
+            ),
+        ]
+        .into_iter()
+        .map(|(link, cat)| {
+            (
+                link,
+                // cat.map(|x| x.into_iter().map(|y| String::from(y)).collect()),
+                cat.map(|x| x.into_iter().collect()),
+            )
+        })
+        .collect();
+
+        for (test_url, categories) in test_urls {
+            let results = b
+                .detect(test_url)
+                .map(|x| x.into_iter().map(|cat| cat.as_str()).collect());
+            assert_eq!(results, categories);
+        }
     }
 
     #[test]
