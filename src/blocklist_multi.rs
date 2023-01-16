@@ -9,6 +9,13 @@
 //! The directory should have a number of subdirs, which in turn should have `domains` and `urls` files.
 //! The easiest way of using this is to get the whole [UT1 Blacklists](https://dsi.ut-capitole.fr/blacklists/index_en.php) archive,
 //! to decompress it and to point to the decompressed folder. **Be careful though, as some blocklists are also compressed (like `adult/domains.gz`)**
+//!
+//! ## Subdomain matching
+//!
+//! This blocklist also tries to match subdomains.
+//!
+//! For example, if `blogspot.com` is in a `blogs` blocklist, `foo.blogspot.com` will be matched and the detector will return `["blogs"]`.
+//! Moreover, if `sportsblog.blogspot.com` is in a `sports` blocklist, `sportsblog.blogspot.com` will be matched and the detector will return `["blogs", "sport"]`.
 /*!
     ```text
     ├── README
@@ -43,6 +50,7 @@ use std::{
 };
 
 use crate::error::Ut1Error;
+use log::{debug, info};
 use url::{Position, Url};
 
 // TODO: replace owned strings by refs to a (static?) tag.
@@ -116,6 +124,7 @@ impl Blocklist {
     ```
     */
     pub fn from_dir(dir: &Path) -> Result<Self, std::io::Error> {
+        info!("Building list from {dir:?}");
         let mut domains: HashMap<_, Vec<_>> = HashMap::new();
         let mut urls: HashMap<_, Vec<_>> = HashMap::new();
 
@@ -126,6 +135,7 @@ impl Blocklist {
                 .unwrap()
                 .to_string_lossy()
                 .to_string();
+            debug!("Reading lists for category {bl_name:?}");
 
             let domain_path = {
                 let mut d = blocklist_path.clone();
@@ -140,7 +150,7 @@ impl Blocklist {
             };
 
             if domain_path.exists() {
-                println!("loading {:?}", bl_name);
+                debug!("loading {:?}", bl_name);
                 let r = File::open(&domain_path)?;
 
                 let bl_domains = BufReader::new(r)
@@ -159,7 +169,6 @@ impl Blocklist {
             }
 
             if urls_path.exists() {
-                //
                 let r = File::open(&urls_path)?;
 
                 let bl_urls = BufReader::new(r)
@@ -183,7 +192,6 @@ impl Blocklist {
     /// iteratively removes subdomains until there's a match
     // TODO optim: we know max number of subdomains in blocklist,
     //             so we could skip more
-    // TODO: make sure we don't check over the TLD only
     fn detect_subdomains(&self, domain: &str) -> Option<HashSet<&String>> {
         // keep domain as vector of chars since we'll rely heavily on indexing
         // we use bytes to be able to use from_utf8 without having to allocate
@@ -209,7 +217,6 @@ impl Blocklist {
                 // string to test is 1 char after the subdomain delimiter unil the end
                 // ignore if we can't build a string slice
                 if let Ok(to_test) = std::str::from_utf8(&chars[pos + 1..]) {
-                    println!("testing {to_test}");
                     if let Some(categories) = self.domains.get(to_test) {
                         // return categories if there's a match
                         return Some(categories);
@@ -331,15 +338,17 @@ mod tests {
         }
     }
 
+    // TODO: Check if this test is actually useful?
     #[test]
     fn test_normalize_domain_add_https() {
         let domain = "abastrologie.com";
-        Blocklist::normalize_domain(domain).unwrap();
+        let _normalized = Blocklist::normalize_domain(domain).unwrap();
     }
 
+    // TODO: Check if this test is actually useful?
     #[test]
     fn test_normalize_url_add_https() {
         let url = "cri.univ-tlse1.fr/tools/test_filtrage/astrology/";
-        Blocklist::normalize_url(url).unwrap();
+        let _normalized = Blocklist::normalize_url(url).unwrap();
     }
 }
