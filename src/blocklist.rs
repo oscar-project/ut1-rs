@@ -1,10 +1,12 @@
-/*! Blocklists.
+/*! Single tag blocklist
 
-Contains basic filtering code and constructors.
+Contains links and a **single** tag.
+
+The underlying datastructure is a [HashSet].
 
 Filtering methods can be used on [Url]s.
 
-!*/
+*/
 use std::{
     collections::HashSet,
     fs::File,
@@ -32,7 +34,6 @@ pub struct Blocklist {
 
 impl Blocklist {
     /// Create a new Blocklist of provided kind.
-    ///
     pub fn new(kind: String, domains: HashSet<String>, urls: HashSet<String>) -> Self {
         Self {
             kind,
@@ -57,7 +58,6 @@ impl Blocklist {
     }
 
     /// create a blocklist from specified kind and folder.
-    ///
     /// It will look for  `path/of/the/folder/kind`.
     pub fn with_folder(kind: String, folder: &Path) -> Result<Self, Error> {
         let mut file_path = PathBuf::from(folder);

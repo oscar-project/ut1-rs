@@ -1,6 +1,6 @@
 [package]
 name = "ut1_blocklist"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 license = "MIT"
 description = "UT1 blocklist URL/domain filters"
@@ -10,6 +10,7 @@ categories = ["text-processing", ]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "0.4.17"
 tempfile = "3.2.0"
 thiserror = "1.0.29"
 url = "2.2.2"
