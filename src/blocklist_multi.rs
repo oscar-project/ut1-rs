@@ -55,6 +55,7 @@ use url::{Position, Url};
 
 // TODO: replace owned strings by refs to a (static?) tag.
 /// Domain and URL blocklist
+#[derive(Clone)]
 pub struct Blocklist {
     domains: HashMap<String, Vec<String>>,
     urls: HashMap<Url, Vec<String>>,

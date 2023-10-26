@@ -26,6 +26,8 @@ use crate::error::Ut1Error as Error;
 ///  - *filter_url* will act on whole URLS
 ///  - *filter_domain* will only check if the provided url's domain is present in the blocklist.
 ///
+
+#[derive(Clone)]
 pub struct Blocklist {
     kind: String,
     domains: HashSet<String>,
