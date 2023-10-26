@@ -275,11 +275,10 @@ impl Blocklist {
 mod tests {
     use std::{
         collections::{HashMap, HashSet},
-        ops::Deref,
         path::Path,
     };
 
-    use url::Url;
+    
 
     use super::Blocklist;
 
