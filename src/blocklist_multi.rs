@@ -269,6 +269,10 @@ impl Blocklist {
             Some(detections)
         }
     }
+
+    pub fn domains_mut(&mut self) -> &mut HashMap<String, Vec<String>> {
+        &mut self.domains
+    }
 }
 
 #[cfg(test)]
@@ -277,8 +281,6 @@ mod tests {
         collections::{HashMap, HashSet},
         path::Path,
     };
-
-    
 
     use super::Blocklist;
 
@@ -290,6 +292,26 @@ mod tests {
         assert_eq!(
             b.detect("https://abastrologie.com"),
             Some(["astrology".to_string()].iter().collect())
+        );
+    }
+
+    #[test]
+    fn test_edit() {
+        let domains = vec![("blogspot.com".to_string(), vec!["blog".to_string()])]
+            .into_iter()
+            .collect();
+
+        let mut b = Blocklist::new(domains, HashMap::new());
+        assert_eq!(
+            b.detect("https://not_here.com/foo"),
+            None // Some(vec![&"blog".to_string()].into_iter().collect())
+        );
+
+        b.domains_mut()
+            .insert("not_here.com".to_string(), vec!["blog".to_string()]);
+        assert_eq!(
+            b.detect("https://not_here.com/foo"),
+            Some(vec![&"blog".to_string()].into_iter().collect())
         );
     }
 
